@@ -15,8 +15,8 @@ def create_fact_table(target_table_id):
           COUNT(trip_id) as total_trips,
           SUM(duration_sec) as sum_duration_sec,
           AVG(duration_sec) as avg_duration_sec
-          FROM `{project_id}.raw_bikesharing.trips trips`
-          JOIN `{project_id}.raw_bikesharing.stations stations`
+          FROM `{project_id}.raw_bikesharing.trips` trips
+          JOIN `{project_id}.raw_bikesharing.stations` stations
           ON trips.start_station_id = stations.station_id
           GROUP BY date, start_station_id, region_id
           ;"""
