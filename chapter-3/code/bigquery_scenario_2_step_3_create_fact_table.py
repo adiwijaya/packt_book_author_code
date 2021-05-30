@@ -21,8 +21,7 @@ def create_fact_table(target_table_id):
           GROUP BY date, start_station_id, region_id
           ;"""
 
-    # Start the query, passing in the extra configuration.
-    query_job = client.query(sql, job_config=job_config)  # Make an API request.
-    query_job.result()  # Wait for the job to complete.
+    query_job = client.query(sql, job_config=job_config)
+    query_job.result()
 
 create_fact_table(target_table_id)
