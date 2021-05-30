@@ -4,7 +4,7 @@ from google.cloud import bigquery
 project_id = "packt-data-eng-on-gcp"
 target_table_id = "{}.dwh_bikesharing.fact_trips_daily".format(project_id)
 
-def load_data_from_bigquery_public(public_table_id, target_table_id):
+def create_fact_table(target_table_id):
     client = bigquery.Client()
     job_config = bigquery.QueryJobConfig(destination=target_table_id)
 
@@ -25,4 +25,4 @@ def load_data_from_bigquery_public(public_table_id, target_table_id):
     query_job = client.query(sql, job_config=job_config)  # Make an API request.
     query_job.result()  # Wait for the job to complete.
 
-load_data_from_bigquery_public(public_table_id, target_table_id)
+create_fact_table(target_table_id)
