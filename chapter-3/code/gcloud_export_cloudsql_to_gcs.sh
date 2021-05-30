@@ -1,4 +1,4 @@
-bucket_name=packt-data-eng-on-gcp-data-bucket
+bucket_name=[your gcs bucket name]
 
 gcloud sql export csv mysql-instance-source \
 gs://$bucket_name/mysql_export/stations/20180101/stations.csv \
