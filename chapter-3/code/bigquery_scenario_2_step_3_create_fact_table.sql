@@ -11,9 +11,6 @@ def load_data_from_bigquery_public(public_table_id, target_table_id):
     table = bigquery.Table(target_table_id)
     sql = f"""SELECT DATE(start_date) as date,
           start_station_id,
-          CASE WHEN member_gender = 'Male' THEN 1
-          WHEN member_gender = 'Female' THEN 0
-          ELSE NULL END as member_gender_id,
           region_id,
           COUNT(trip_id) as total_trips,
           SUM(duration_sec) as sum_duration_sec,
@@ -21,7 +18,7 @@ def load_data_from_bigquery_public(public_table_id, target_table_id):
           FROM `{project_id}.raw_bikesharing.trips`
           JOIN `{project_id}.raw_bikesharing.stations`
           ON trips.start_station_id = stations.station_id
-          GROUP BY date, start_station_id, member_gender, region_id
+          GROUP BY date, start_station_id, region_id
           ;"""
 
     # Start the query, passing in the extra configuration.
