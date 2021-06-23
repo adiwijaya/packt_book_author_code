@@ -71,7 +71,7 @@ with DAG(
         task_id='send_dag_success_signal',
         source_bucket=gcs_source_data_bucket,
         source_object=f'chapter-4/data/signal/_SUCCESS',
-        destination_bucket=GCS_BUCKET_JOB_CONFIG,
+        destination_bucket=gcs_source_data_bucket,
         destination_object='data/signal/staging/{{ dag }}/{{ ds }}/_SUCCESS'
     )
 
