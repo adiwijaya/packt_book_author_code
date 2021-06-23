@@ -4,6 +4,7 @@ from airflow import DAG
 from airflow.contrib.operators.gcp_sql_operator import CloudSqlInstanceExportOperator
 from airflow.contrib.operators.gcs_to_bq import GoogleCloudStorageToBigQueryOperator
 from airflow.contrib.operators.gcs_to_gcs import GoogleCloudStorageToGoogleCloudStorageOperator
+from airflow.contrib.sensors.gcs_sensor import GoogleCloudStorageObjectSensor
 from airflow.contrib.operators.bigquery_check_operator import BigQueryCheckOperator
 from airflow.contrib.operators.bigquery_to_gcs import BigQueryToCloudStorageOperator
 from airflow.contrib.operators.bigquery_operator import BigQueryOperator
