@@ -75,7 +75,7 @@ with DAG(
         destination_object='data/signal/staging/{{ dag }}/{{ ds }}/_SUCCESS'
     )
 
-    input_sensor >> dwh_fact_trips_daily >> send_dag_success_signal
+    input_sensor >> data_mart_sum_total_trips >> send_dag_success_signal
 
 if __name__ == "__main__":
     dag.cli()
