@@ -26,7 +26,7 @@ settings = Variable.get("level_3_dag_settings", deserialize_json=True)
 gcs_source_data_bucket = settings['gcs_source_data_bucket']
 bq_dwh_dataset         = settings['bq_dwh_dataset']
 bq_datamart_dataset    = settings['dm_bikesharing']
-parent_dag = 'level_5_dag'
+parent_dag = 'level_5_dag_sensor'
 sum_total_trips_table_id = f'{gcp_project_id}.{bq_datamart_dataset}.sum_total_trips_daily'
 
 # Macros

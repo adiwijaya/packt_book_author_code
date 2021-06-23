@@ -84,7 +84,7 @@ bq_dim_stations_table_name = "dim_stations"
 bq_dim_stations_table_id      = f"{gcp_project_id}.{bq_dwh_dataset}.{bq_dim_stations_table_name}"
 
 with DAG(
-    dag_id='level_5_dag',
+    dag_id='level_5_dag_sensor',
     default_args=args,
     schedule_interval='0 5 * * *',
     start_date=datetime(2018, 1, 1),
