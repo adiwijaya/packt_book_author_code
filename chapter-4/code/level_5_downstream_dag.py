@@ -46,7 +46,7 @@ with DAG(
         task_id='sensor_task',
         bucket=gcs_source_data_bucket,
         object=f'data/signal/{parent_dag}/{execution_date_nodash}/_SUCCESS',
-        mode='poke'
+        mode='poke',
         poke_interval=60,
         timeout=60 * 60 * 24 * 7
     )
