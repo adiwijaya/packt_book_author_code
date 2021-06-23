@@ -28,6 +28,7 @@ bq_dwh_dataset         = settings['bq_dwh_dataset']
 # DAG Variables
 bq_datamart_dataset    = 'dm_bikesharing'
 parent_dag = 'level_5_dag_sensor'
+bq_fact_trips_daily_table_id = f'{gcp_project_id}.{bq_datamart_dataset}.facts_trips_daily'
 sum_total_trips_table_id = f'{gcp_project_id}.{bq_datamart_dataset}.sum_total_trips_daily'
 
 # Macros
