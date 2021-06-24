@@ -73,7 +73,7 @@ gcs_trips_source_object = f"chapter-4/trips/{extracted_date_nodash}/*.csv"
 gcs_trips_source_uri=f"gs://{gcs_source_data_bucket}/{gcs_trips_source_object}"
 
 bq_trips_table_name = "trips"
-bq_trips_table_id      = f"{gcp_project_id}.{bq_raw_dataset}.{bq_trips_table_name}${extracted_date_nodash}"
+bq_trips_table_id      = f"{gcp_project_id}.{bq_raw_dataset}.{bq_trips_table_name}"
 bq_trips_table_schema = read_json_schema("/home/airflow/gcs/data/schema/trips_schema.json")
 
 # DWH
@@ -149,7 +149,7 @@ with DAG(
     task_id                             = "gcs_to_bq_trips",
     bucket                              = gcs_source_data_bucket,
     source_objects                      = [gcs_trips_source_object],
-    destination_project_dataset_table   = bq_trips_table_id,
+    destination_project_dataset_table   = bq_trips_table_id + f"${extracted_date_nodash}",
     schema_fields                       = bq_trips_table_schema,
     time_partitioning                   = {'time_partitioning_type':'DAY','field': 'start_date'},
     write_disposition                   ='WRITE_TRUNCATE'
