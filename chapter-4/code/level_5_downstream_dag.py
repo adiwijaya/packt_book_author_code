@@ -47,7 +47,7 @@ with DAG(
     input_sensor = GoogleCloudStorageObjectSensor(
         task_id='sensor_task',
         bucket=gcs_source_data_bucket,
-        object=f'data/signal/{parent_dag}/{execution_date_nodash}/_SUCCESS',
+        object=f'chapter-4/data/signal/{parent_dag}/{execution_date_nodash}/_SUCCESS',
         mode='poke',
         poke_interval=60,
         timeout=60 * 60 * 24 * 7
