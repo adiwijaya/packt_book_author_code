@@ -1,0 +1,187 @@
+{
+  "pipelineSpec": {
+    "components": {
+      "comp-load-data-from-bigquery": {
+        "executorLabel": "exec-load-data-from-bigquery",
+        "inputDefinitions": {
+          "parameters": {
+            "output_gcs_bucket": {
+              "type": "STRING"
+            },
+            "public_table_id": {
+              "type": "STRING"
+            }
+          }
+        },
+        "outputDefinitions": {
+          "parameters": {
+            "Output": {
+              "type": "STRING"
+            }
+          }
+        }
+      },
+      "comp-train-model": {
+        "executorLabel": "exec-train-model",
+        "inputDefinitions": {
+          "parameters": {
+            "gcs_bucket": {
+              "type": "STRING"
+            },
+            "model_name": {
+              "type": "STRING"
+            },
+            "n_estimators": {
+              "type": "INT"
+            },
+            "target_column": {
+              "type": "STRING"
+            },
+            "train_file_path": {
+              "type": "STRING"
+            }
+          }
+        }
+      }
+    },
+    "deploymentSpec": {
+      "executors": {
+        "exec-load-data-from-bigquery": {
+          "container": {
+            "args": [
+              "--executor_input",
+              "{{$}}",
+              "--function_to_execute",
+              "load_data_from_bigquery"
+            ],
+            "command": [
+              "sh",
+              "-c",
+              "(python3 -m ensurepip || python3 -m ensurepip --user) && (PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet                 --no-warn-script-location 'google-cloud-bigquery' 'google-cloud-storage' 'pandas' 'pyarrow' 'kfp==1.8.0' || PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet                 --no-warn-script-location 'google-cloud-bigquery' 'google-cloud-storage' 'pandas' 'pyarrow' 'kfp==1.8.0' --user) && \"$0\" \"$@\"",
+              "sh",
+              "-ec",
+              "program_path=$(mktemp -d)\nprintf \"%s\" \"$0\" > \"$program_path/ephemeral_component.py\"\npython3 -m kfp.v2.components.executor_main                         --component_module_path                         \"$program_path/ephemeral_component.py\"                         \"$@\"\n",
+              "\nfrom kfp.v2.dsl import *\nfrom typing import *\n\ndef load_data_from_bigquery(public_table_id: str, output_gcs_bucket: str) -> str:\n    from google.cloud import bigquery\n    from google.cloud import storage\n\n    project_id = \"aw-general-dev\"\n    output_file = \"aipipeline-root/credit-card-default/artefacts/train.csv\"\n\n    bq_client = bigquery.Client(project=project_id)\n    sql = f\"\"\"SELECT limit_balance, education_level, age, default_payment_next_month FROM `{public_table_id}` LIMIT 1000;\"\"\"\n    dataframe = (bq_client.query(sql).result().to_dataframe())\n\n    gcs_client = storage.Client(project=project_id)\n    bucket = gcs_client.get_bucket('aw-general-dev')\n    bucket.blob(output_file).upload_from_string(dataframe.to_csv(index=False), 'text/csv')\n\n    return output_file\n\n"
+            ],
+            "image": "python:3.7"
+          }
+        },
+        "exec-train-model": {
+          "container": {
+            "args": [
+              "--executor_input",
+              "{{$}}",
+              "--function_to_execute",
+              "train_model"
+            ],
+            "command": [
+              "sh",
+              "-c",
+              "(python3 -m ensurepip || python3 -m ensurepip --user) && (PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet                 --no-warn-script-location 'google-cloud-storage' 'pandas' 'scikit-learn==0.21.3' 'fsspec' 'gcsfs' 'kfp==1.8.0' || PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet                 --no-warn-script-location 'google-cloud-storage' 'pandas' 'scikit-learn==0.21.3' 'fsspec' 'gcsfs' 'kfp==1.8.0' --user) && \"$0\" \"$@\"",
+              "sh",
+              "-ec",
+              "program_path=$(mktemp -d)\nprintf \"%s\" \"$0\" > \"$program_path/ephemeral_component.py\"\npython3 -m kfp.v2.components.executor_main                         --component_module_path                         \"$program_path/ephemeral_component.py\"                         \"$@\"\n",
+              "\nfrom kfp.v2.dsl import *\nfrom typing import *\n\ndef train_model(gcs_bucket: str, train_file_path: str, target_column: str, n_estimators: int, model_name: str):\n    from google.cloud import storage\n    from sklearn.ensemble import RandomForestClassifier\n    from sklearn.model_selection import train_test_split\n    from sklearn import metrics\n    from sklearn.externals import joblib\n    import pandas as pd\n\n    project_id = \"aw-general-dev\"\n\n    dataframe = pd.read_csv(f'gs://{gcs_bucket}/{train_file_path}')\n    labels = dataframe[target_column]\n    features = dataframe.drop(target_column, axis = 1)\n    output_file = f\"aipipeline-root/credit-card-default/artefacts/{model_name}\"\n\n    print(\"Features :\")\n    print(features.head(5))\n\n    print(\"Labels :\")\n    print(labels.head(5))\n\n    X_train, X_test, y_train, y_test = train_test_split(features, labels, test_size=0.3) \n\n    random_forest_classifier = RandomForestClassifier(n_estimators=n_estimators)\n    random_forest_classifier.fit(X_train,y_train)\n\n    y_pred=random_forest_classifier.predict(X_test)\n    print(\"Simulate Prediction :\")\n    print(y_pred[:3])\n\n    print(\"Accuracy:\",metrics.accuracy_score(y_test, y_pred))\n\n    joblib.dump(random_forest_classifier, model_name)\n\n    bucket = storage.Client().bucket(gcs_bucket)\n    blob = bucket.blob(output_file)\n    blob.upload_from_filename(model_name)\n\n    print(f\"Model saved in : {output_file}\")\n\n"
+            ],
+            "image": "python:3.7"
+          }
+        }
+      }
+    },
+    "pipelineInfo": {
+      "name": "credit-default-ml-pipeline-train"
+    },
+    "root": {
+      "dag": {
+        "tasks": {
+          "load-data-from-bigquery": {
+            "cachingOptions": {
+              "enableCache": true
+            },
+            "componentRef": {
+              "name": "comp-load-data-from-bigquery"
+            },
+            "inputs": {
+              "parameters": {
+                "output_gcs_bucket": {
+                  "runtimeValue": {
+                    "constantValue": {
+                      "stringValue": "aw-general-dev"
+                    }
+                  }
+                },
+                "public_table_id": {
+                  "runtimeValue": {
+                    "constantValue": {
+                      "stringValue": "bigquery-public-data.ml_datasets.credit_card_default"
+                    }
+                  }
+                }
+              }
+            },
+            "taskInfo": {
+              "name": "load-data-from-bigquery"
+            }
+          },
+          "train-model": {
+            "cachingOptions": {
+              "enableCache": true
+            },
+            "componentRef": {
+              "name": "comp-train-model"
+            },
+            "dependentTasks": [
+              "load-data-from-bigquery"
+            ],
+            "inputs": {
+              "parameters": {
+                "gcs_bucket": {
+                  "runtimeValue": {
+                    "constantValue": {
+                      "stringValue": "aw-general-dev"
+                    }
+                  }
+                },
+                "model_name": {
+                  "runtimeValue": {
+                    "constantValue": {
+                      "stringValue": "cc_default_rf_model.joblib"
+                    }
+                  }
+                },
+                "n_estimators": {
+                  "runtimeValue": {
+                    "constantValue": {
+                      "intValue": "100"
+                    }
+                  }
+                },
+                "target_column": {
+                  "runtimeValue": {
+                    "constantValue": {
+                      "stringValue": "default_payment_next_month"
+                    }
+                  }
+                },
+                "train_file_path": {
+                  "taskOutputParameter": {
+                    "outputParameterKey": "Output",
+                    "producerTask": "load-data-from-bigquery"
+                  }
+                }
+              }
+            },
+            "taskInfo": {
+              "name": "train-model"
+            }
+          }
+        }
+      }
+    },
+    "schemaVersion": "2.0.0",
+    "sdkVersion": "kfp-1.8.0"
+  },
+  "runtimeConfig": {
+    "gcsOutputDirectory": "gs://aw-general-dev/aipipeline-root/credit-card-default"
+  }
+}
