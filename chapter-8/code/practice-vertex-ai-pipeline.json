@@ -1,24 +1,24 @@
 {
   "pipelineSpec": {
     "components": {
-      "comp-consumer": {
-        "executorLabel": "exec-consumer",
+      "comp-step-four": {
+        "executorLabel": "exec-step-four",
         "inputDefinitions": {
           "parameters": {
+            "gcs_bucket": {
+              "type": "STRING"
+            },
             "text1": {
               "type": "STRING"
             },
             "text2": {
               "type": "STRING"
-            },
-            "text3": {
-              "type": "STRING"
             }
           }
         }
       },
-      "comp-hello-world": {
-        "executorLabel": "exec-hello-world",
+      "comp-step-one": {
+        "executorLabel": "exec-step-one",
         "inputDefinitions": {
           "parameters": {
             "text": {
@@ -34,8 +34,8 @@
           }
         }
       },
-      "comp-two-outputs": {
-        "executorLabel": "exec-two-outputs",
+      "comp-step-three": {
+        "executorLabel": "exec-step-three",
         "inputDefinitions": {
           "parameters": {
             "text": {
@@ -45,10 +45,24 @@
         },
         "outputDefinitions": {
           "parameters": {
-            "output_one": {
+            "Output": {
               "type": "STRING"
-            },
-            "output_two": {
+            }
+          }
+        }
+      },
+      "comp-step-two": {
+        "executorLabel": "exec-step-two",
+        "inputDefinitions": {
+          "parameters": {
+            "text": {
+              "type": "STRING"
+            }
+          }
+        },
+        "outputDefinitions": {
+          "parameters": {
+            "Output": {
               "type": "STRING"
             }
           }
@@ -57,53 +71,13 @@
     },
     "deploymentSpec": {
       "executors": {
-        "exec-consumer": {
+        "exec-step-four": {
           "container": {
             "args": [
               "--executor_input",
               "{{$}}",
               "--function_to_execute",
-              "consumer"
-            ],
-            "command": [
-              "sh",
-              "-c",
-              "(python3 -m ensurepip || python3 -m ensurepip --user) && (PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet                 --no-warn-script-location 'kfp==1.8.0' || PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet                 --no-warn-script-location 'kfp==1.8.0' --user) && \"$0\" \"$@\"",
-              "sh",
-              "-ec",
-              "program_path=$(mktemp -d)\nprintf \"%s\" \"$0\" > \"$program_path/ephemeral_component.py\"\npython3 -m kfp.v2.components.executor_main                         --component_module_path                         \"$program_path/ephemeral_component.py\"                         \"$@\"\n",
-              "\nfrom kfp.v2.dsl import *\nfrom typing import *\n\ndef consumer(text1: str, text2: str, text3: str):\n    print(f\"text1: {text1}; text2: {text2}; text3: {text3}\")\n\n"
-            ],
-            "image": "python:3.7"
-          }
-        },
-        "exec-hello-world": {
-          "container": {
-            "args": [
-              "--executor_input",
-              "{{$}}",
-              "--function_to_execute",
-              "hello_world"
-            ],
-            "command": [
-              "sh",
-              "-c",
-              "(python3 -m ensurepip || python3 -m ensurepip --user) && (PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet                 --no-warn-script-location 'kfp==1.8.0' || PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet                 --no-warn-script-location 'kfp==1.8.0' --user) && \"$0\" \"$@\"",
-              "sh",
-              "-ec",
-              "program_path=$(mktemp -d)\nprintf \"%s\" \"$0\" > \"$program_path/ephemeral_component.py\"\npython3 -m kfp.v2.components.executor_main                         --component_module_path                         \"$program_path/ephemeral_component.py\"                         \"$@\"\n",
-              "\nfrom kfp.v2.dsl import *\nfrom typing import *\n\ndef hello_world(text: str) -> str:\n    print(text)\n    return text\n\n"
-            ],
-            "image": "python:3.9"
-          }
-        },
-        "exec-two-outputs": {
-          "container": {
-            "args": [
-              "--executor_input",
-              "{{$}}",
-              "--function_to_execute",
-              "two_outputs"
+              "step_four"
             ],
             "command": [
               "sh",
@@ -112,90 +86,181 @@
               "sh",
               "-ec",
               "program_path=$(mktemp -d)\nprintf \"%s\" \"$0\" > \"$program_path/ephemeral_component.py\"\npython3 -m kfp.v2.components.executor_main                         --component_module_path                         \"$program_path/ephemeral_component.py\"                         \"$@\"\n",
-              "\nfrom kfp.v2.dsl import *\nfrom typing import *\n\ndef two_outputs(\n    text: str,\n) -> NamedTuple(\n    \"Outputs\",\n    [\n        (\"output_one\", str),  # Return parameters\n        (\"output_two\", str),\n    ],\n):\n    # the import is not actually used for this simple example, but the import\n    # is successful, as it was included in the `packages_to_install` list.\n    from google.cloud import storage  # noqa: F401\n\n    o1 = f\"output one from text: {text}\"\n    o2 = f\"output two from text: {text}\"\n    print(\"output one: {}; output_two: {}\".format(o1, o2))\n    return (o1, o2)\n\n"
+              "\nfrom kfp.v2.dsl import *\nfrom typing import *\n\ndef step_four(text1: str, text2: str, gcs_bucket: str):\n    from google.cloud import storage\n\n    output_string = f\"text1: {text1}; text2: {text2};\"\n\n    storage_client = storage.Client()\n    bucket = storage_client.get_bucket(gcs_bucket)\n    blob = bucket.blob(f\"practice-vertex-ai-pipeline/artefact/output.txt\")\n    blob.upload_from_string(output_string)\n\n    print(output_string)\n\n"
             ],
             "image": "python:3.7"
+          }
+        },
+        "exec-step-one": {
+          "container": {
+            "args": [
+              "--executor_input",
+              "{{$}}",
+              "--function_to_execute",
+              "step_one"
+            ],
+            "command": [
+              "sh",
+              "-c",
+              "(python3 -m ensurepip || python3 -m ensurepip --user) && (PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet                 --no-warn-script-location 'kfp==1.8.0' || PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet                 --no-warn-script-location 'kfp==1.8.0' --user) && \"$0\" \"$@\"",
+              "sh",
+              "-ec",
+              "program_path=$(mktemp -d)\nprintf \"%s\" \"$0\" > \"$program_path/ephemeral_component.py\"\npython3 -m kfp.v2.components.executor_main                         --component_module_path                         \"$program_path/ephemeral_component.py\"                         \"$@\"\n",
+              "\nfrom kfp.v2.dsl import *\nfrom typing import *\n\ndef step_one(text: str) -> str:\n    print(text)\n    return text\n\n"
+            ],
+            "image": "python:3.7"
+          }
+        },
+        "exec-step-three": {
+          "container": {
+            "args": [
+              "--executor_input",
+              "{{$}}",
+              "--function_to_execute",
+              "step_three"
+            ],
+            "command": [
+              "sh",
+              "-c",
+              "(python3 -m ensurepip || python3 -m ensurepip --user) && (PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet                 --no-warn-script-location 'kfp==1.8.0' || PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet                 --no-warn-script-location 'kfp==1.8.0' --user) && \"$0\" \"$@\"",
+              "sh",
+              "-ec",
+              "program_path=$(mktemp -d)\nprintf \"%s\" \"$0\" > \"$program_path/ephemeral_component.py\"\npython3 -m kfp.v2.components.executor_main                         --component_module_path                         \"$program_path/ephemeral_component.py\"                         \"$@\"\n",
+              "\nfrom kfp.v2.dsl import *\nfrom typing import *\n\ndef step_three(text: str) -> str:\n    print(text)\n    return text\n\n"
+            ],
+            "image": "python:3.9"
+          }
+        },
+        "exec-step-two": {
+          "container": {
+            "args": [
+              "--executor_input",
+              "{{$}}",
+              "--function_to_execute",
+              "step_two"
+            ],
+            "command": [
+              "sh",
+              "-c",
+              "(python3 -m ensurepip || python3 -m ensurepip --user) && (PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet                 --no-warn-script-location 'kfp==1.8.0' || PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet                 --no-warn-script-location 'kfp==1.8.0' --user) && \"$0\" \"$@\"",
+              "sh",
+              "-ec",
+              "program_path=$(mktemp -d)\nprintf \"%s\" \"$0\" > \"$program_path/ephemeral_component.py\"\npython3 -m kfp.v2.components.executor_main                         --component_module_path                         \"$program_path/ephemeral_component.py\"                         \"$@\"\n",
+              "\nfrom kfp.v2.dsl import *\nfrom typing import *\n\ndef step_two(text: str) -> str:\n    print(text)\n    return text\n\n"
+            ],
+            "image": "python:3.9"
           }
         }
       }
     },
     "pipelineInfo": {
-      "name": "hello-world-v2"
+      "name": "practice-vertex-ai-pipeline"
     },
     "root": {
       "dag": {
         "tasks": {
-          "consumer": {
+          "step-four": {
             "cachingOptions": {
               "enableCache": true
             },
             "componentRef": {
-              "name": "comp-consumer"
+              "name": "comp-step-four"
             },
             "dependentTasks": [
-              "hello-world",
-              "two-outputs"
+              "step-three",
+              "step-two"
             ],
             "inputs": {
               "parameters": {
+                "gcs_bucket": {
+                  "runtimeValue": {
+                    "constantValue": {
+                      "stringValue": "packt-data-eng-on-gcp-vertex-ai-pipeline"
+                    }
+                  }
+                },
                 "text1": {
                   "taskOutputParameter": {
                     "outputParameterKey": "Output",
-                    "producerTask": "hello-world"
+                    "producerTask": "step-two"
                   }
                 },
                 "text2": {
                   "taskOutputParameter": {
-                    "outputParameterKey": "output_one",
-                    "producerTask": "two-outputs"
+                    "outputParameterKey": "Output",
+                    "producerTask": "step-three"
                   }
-                },
-                "text3": {
+                }
+              }
+            },
+            "taskInfo": {
+              "name": "step-four"
+            }
+          },
+          "step-one": {
+            "cachingOptions": {
+              "enableCache": true
+            },
+            "componentRef": {
+              "name": "comp-step-one"
+            },
+            "inputs": {
+              "parameters": {
+                "text": {
+                  "componentInputParameter": "text"
+                }
+              }
+            },
+            "taskInfo": {
+              "name": "step-one"
+            }
+          },
+          "step-three": {
+            "cachingOptions": {
+              "enableCache": true
+            },
+            "componentRef": {
+              "name": "comp-step-three"
+            },
+            "dependentTasks": [
+              "step-one"
+            ],
+            "inputs": {
+              "parameters": {
+                "text": {
                   "taskOutputParameter": {
-                    "outputParameterKey": "output_two",
-                    "producerTask": "two-outputs"
+                    "outputParameterKey": "Output",
+                    "producerTask": "step-one"
                   }
                 }
               }
             },
             "taskInfo": {
-              "name": "consumer"
+              "name": "step-three"
             }
           },
-          "hello-world": {
+          "step-two": {
             "cachingOptions": {
               "enableCache": true
             },
             "componentRef": {
-              "name": "comp-hello-world"
+              "name": "comp-step-two"
             },
+            "dependentTasks": [
+              "step-one"
+            ],
             "inputs": {
               "parameters": {
                 "text": {
-                  "componentInputParameter": "text"
+                  "taskOutputParameter": {
+                    "outputParameterKey": "Output",
+                    "producerTask": "step-one"
+                  }
                 }
               }
             },
             "taskInfo": {
-              "name": "hello-world"
-            }
-          },
-          "two-outputs": {
-            "cachingOptions": {
-              "enableCache": true
-            },
-            "componentRef": {
-              "name": "comp-two-outputs"
-            },
-            "inputs": {
-              "parameters": {
-                "text": {
-                  "componentInputParameter": "text"
-                }
-              }
-            },
-            "taskInfo": {
-              "name": "two-outputs"
+              "name": "step-two"
             }
           }
         }
@@ -212,10 +277,10 @@
     "sdkVersion": "kfp-1.8.0"
   },
   "runtimeConfig": {
-    "gcsOutputDirectory": "gs://aw-general-dev/aipipeline-root/hello-world",
+    "gcsOutputDirectory": "gs://packt-data-eng-on-gcp-vertex-ai-pipeline/practice-vertex-ai-pipeline",
     "parameters": {
       "text": {
-        "stringValue": "hi there"
+        "stringValue": "Hello"
       }
     }
   }

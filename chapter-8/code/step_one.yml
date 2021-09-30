@@ -1,11 +1,11 @@
-name: Hello world
+name: Step one
 inputs:
 - {name: text, type: String}
 outputs:
 - {name: Output, type: String}
 implementation:
   container:
-    image: python:3.9
+    image: python:3.7
     command:
     - sh
     - -c
@@ -24,7 +24,7 @@ implementation:
       from kfp.v2.dsl import *
       from typing import *
 
-      def hello_world(text: str) -> str:
+      def step_one(text: str) -> str:
           print(text)
           return text
 
@@ -32,4 +32,4 @@ implementation:
     - --executor_input
     - {executorInput: null}
     - --function_to_execute
-    - hello_world
+    - step_one

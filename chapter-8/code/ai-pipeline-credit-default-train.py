@@ -1,34 +1,33 @@
-from kfp import dsl
+from kfp.dsl import pipeline
 from kfp.v2 import compiler
 from kfp.v2.dsl import component
 from kfp.v2.google.client import AIPlatformClient
 
-project_id = "aw-general-dev"
+# TODO: Change with your project id and gcs bucket name
+project_id = "packt-data-eng-on-gcp"
+gcs_bucket = "packt-data-eng-on-gcp-vertex-ai-pipeline"
 region = "us-central1"
-gcs_bucket = "aw-general-dev"
-pipeline_root_path = f"gs://{gcs_bucket}/aipipeline-root/credit-card-default"
+pipeline_name = "ai-pipeline-credit-default-train"
+pipeline_root_path = f"gs://{gcs_bucket}/{pipeline_name}"
 
-# TODO : Change to your project id
-# project_id = "packt-data-eng-on-gcp"
-public_table_id = "bigquery-public-data.ml_datasets.credit_card_default"
+bigquery_table_id = f"{project_id}.ml_dataset.credit_card_default"
 target_column = "default_payment_next_month"
 model_name = "cc_default_rf_model.joblib"
 
-
 @component(packages_to_install=["google-cloud-bigquery","google-cloud-storage","pandas","pyarrow"])
-def load_data_from_bigquery(public_table_id: str, output_gcs_bucket: str) -> str:
+def load_data_from_bigquery(bigquery_table_id: str, output_gcs_bucket: str) -> str:
     from google.cloud import bigquery
     from google.cloud import storage
 
-    project_id = "aw-general-dev"
-    output_file = "aipipeline-root/credit-card-default/artefacts/train.csv"
+    project_id = "packt-data-eng-on-gcp"
+    output_file = "ai-pipeline-credit-default-train/artefacts/train.csv"
 
     bq_client = bigquery.Client(project=project_id)
-    sql = f"""SELECT limit_balance, education_level, age, default_payment_next_month FROM `{public_table_id}` LIMIT 1000;"""
+    sql = f"""SELECT limit_balance, education_level, age, default_payment_next_month FROM `{bigquery_table_id}`;"""
     dataframe = (bq_client.query(sql).result().to_dataframe())
     
     gcs_client = storage.Client(project=project_id)
-    bucket = gcs_client.get_bucket('aw-general-dev')
+    bucket = gcs_client.get_bucket(output_gcs_bucket)
     bucket.blob(output_file).upload_from_string(dataframe.to_csv(index=False), 'text/csv')
 
     return output_file
@@ -42,12 +41,10 @@ def train_model(gcs_bucket: str, train_file_path: str, target_column: str, n_est
     from sklearn.externals import joblib
     import pandas as pd
 
-    project_id = "aw-general-dev"
-
     dataframe = pd.read_csv(f'gs://{gcs_bucket}/{train_file_path}')
     labels = dataframe[target_column]
     features = dataframe.drop(target_column, axis = 1)
-    output_file = f"aipipeline-root/credit-card-default/artefacts/{model_name}"
+    output_file = f"ai-pipeline-credit-default-train/artefacts/{model_name}"
 
     print("Features :")
     print(features.head(5))
@@ -75,24 +72,22 @@ def train_model(gcs_bucket: str, train_file_path: str, target_column: str, n_est
     print(f"Model saved in : {output_file}")
 
 
-@dsl.pipeline(
-    name="credit-default-ml-pipeline-train",
+@pipeline(
+    name=pipeline_name,
     description="An ML pipeline to train credit card default",
     pipeline_root=pipeline_root_path,
 )
 def pipeline():
-    load_data_from_bigquery_task = load_data_from_bigquery(public_table_id, gcs_bucket)
+    load_data_from_bigquery_task = load_data_from_bigquery(bigquery_table_id, gcs_bucket)
     train_model(gcs_bucket, load_data_from_bigquery_task.output, target_column, 100, model_name)
 
 compiler.Compiler().compile(
-    pipeline_func=pipeline, package_path="credit_ml_pipeline.json"
+    pipeline_func=pipeline, package_path="{pipeline_name}.json"
 )
 
 api_client = AIPlatformClient(project_id=project_id, region=region)
 
 response = api_client.create_run_from_job_spec(
-    job_spec_path="credit_ml_pipeline.json", 
-    pipeline_root=pipeline_root_path,
-    service_account="service-general@aw-general-dev.iam.gserviceaccount.com",
-    enable_caching=False
+    job_spec_path="{pipeline_name}.json", 
+    pipeline_root=pipeline_root_path
 )

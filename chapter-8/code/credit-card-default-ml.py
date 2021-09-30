@@ -9,13 +9,13 @@ import pandas as pd
 
 # TODO : Change to your project id
 project_id = "packt-data-eng-on-gcp"
-public_table_id = "bigquery-public-data.ml_datasets.credit_card_default"
+dataset_table_id = "ml_dataset.credit_card_default"
 target_column = "default_payment_next_month"
 model_name = "cc_default_rf_model.sav"
 
-def load_data_from_bigquery(public_table_id):
+def load_data_from_bigquery(dataset_table_id):
     client = bigquery.Client()
-    sql = f"""SELECT limit_balance, education_level, age, default_payment_next_month FROM `{public_table_id}` LIMIT 1000;"""
+    sql = f"""SELECT limit_balance, education_level, age, default_payment_next_month FROM `{dataset_table_id}`"""
     dataframe = (client.query(sql).result().to_dataframe())
     
     print("This is our training table from BigQuery")
@@ -47,11 +47,11 @@ def train_model(dataframe):
 
     return random_forest_classifier
 
-def predict_batch(public_table_id):
+def predict_batch(dataset_table_id):
     loaded_model = joblib.load(model_name)
 
     client = bigquery.Client()
-    sql = f"""SELECT limit_balance, education_level, age FROM `{public_table_id}` LIMIT 10;"""
+    sql = f"""SELECT limit_balance, education_level, age FROM `{dataset_table_id}` LIMIT 10;"""
     dataframe = (client.query(sql).result().to_dataframe())
     
     prediction=loaded_model.predict(dataframe)
@@ -70,13 +70,13 @@ def predict_online(feature_json):
 
 
 # Load data from BigQuery public dataset to Pandas
-data_in_pandas = load_data_from_bigquery(public_table_id)    
+data_in_pandas = load_data_from_bigquery(dataset_table_id)    
 
 # Train ML model using RandomForest
 random_forest_classifier = train_model(data_in_pandas)
 
 # Predict Batch
-predict_batch(public_table_id)
+predict_batch(dataset_table_id)
 
 # Predict Online
 limit_balance = 1000
